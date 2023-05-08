@@ -1,10 +1,17 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, send_from_directory
+import os
 
 app = Flask(__name__)
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+@app.route('/<path:filename>')
+def public_files(filename):
+    public_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+    return send_from_directory(public_folder, filename)
 
 @app.route('/endpoint1')
 def endpoint1():
