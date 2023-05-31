@@ -10,10 +10,14 @@ from PIL import Image
 app = Flask(__name__)
 
 parsed_data = {}
-model = YOLO("detect/detect/train9/weights/SCDModelV1.pt")  # build a new model from scratch
+
+
+
+
+model = YOLO("SCDModelV1.pt")
 # model.export(format='onnx')
 image_folder = r"pictures"  # Path to the folder containing images
-output_folder = r"output"  # Path to the folder where you want to save the predicted images
+output_folder =  r"output"  # Path to the folder where you want to save the predicted images
 
 
 def create_json_object(results, class_labels, title):
@@ -40,6 +44,7 @@ def public_files(filename):
 
 @app.route('/endpoint1')
 def endpoint1():
+    print(output_folder)
     # Create the output folder if it doesn't exist
     os.makedirs(output_folder, exist_ok=True)
 
@@ -57,8 +62,7 @@ def endpoint1():
         create_json_object(results, model.names, image_title)
 
     json_data = json.dumps(parsed_data)
-    file_path = "output\output.json"
-
+    file_path = "output.json"
     with open(file_path, 'w') as file:
         file.write(json_data)
 
