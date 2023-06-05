@@ -59,7 +59,7 @@ def endpoint1():
         image_title = os.path.splitext(os.path.basename(image_file))[0]
 
         # Make predictions on the image
-        results = model.predict(image, save=True, show=False, project="/output", name="runs")  # Predict on the image
+        results = model.predict(image, save=True, show=False, project="./output", name="sickle-cell")  # Predict on the image
         create_json_object(results, model.names, image_title)
 
     json_data = json.dumps(parsed_data)
