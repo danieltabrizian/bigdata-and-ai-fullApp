@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, send_from_directory, request
+from flask import Flask, render_template, jsonify, send_from_directory
 import os
 import json
 import cv2
@@ -59,16 +59,16 @@ def endpoint1():
         image_title = os.path.splitext(os.path.basename(image_file))[0]
 
         # Make predictions on the image
-        results = model.predict(image, save=True, show=False, project="./output", name="sickle-cell")  # Predict on the image
+        results = model.predict(image, save=True, show=False)  # Predict on the image
         create_json_object(results, model.names, image_title)
 
     json_data = json.dumps(parsed_data)
-    file_path = "./output/output.json"
+    file_path = "output.json"
     with open(file_path, 'w') as file:
         file.write(json_data)
 
     cv2.waitKey(0)
-    return json_data
+    return jsonify(json_data)
 
 @app.route('/endpoint2', methods=['POST'])
 def endpoint2():
@@ -84,7 +84,12 @@ def endpoint2():
         os.makedirs(save_directory)
 
     file.save(os.path.join(save_directory, file.filename))
-    return "File uploaded successfully."
+    return "File uploaded successfully."]
+
+@app.route('/image/<filename>')
+def image_request(filename):
+    return send_from_directory('output', filename+".jpg")
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="127.0.0.1", port=8080, debug=False)
