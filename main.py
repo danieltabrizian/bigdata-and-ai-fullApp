@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, send_from_directory
+from flask import Flask, render_template, jsonify, send_from_directory, request
 import os
 import json
 import cv2
@@ -45,6 +45,7 @@ def public_files(filename):
 @app.route('/endpoint1')
 def endpoint1():
     print(output_folder)
+
     # Create the output folder if it doesn't exist
     os.makedirs(output_folder, exist_ok=True)
 
@@ -58,21 +59,32 @@ def endpoint1():
         image_title = os.path.splitext(os.path.basename(image_file))[0]
 
         # Make predictions on the image
-        results = model.predict(image, save=True, show=False)  # Predict on the image
+        results = model.predict(image, save=True, show=False, project="/output", name="runs")  # Predict on the image
         create_json_object(results, model.names, image_title)
 
     json_data = json.dumps(parsed_data)
-    file_path = "output.json"
+    file_path = "./output/output.json"
     with open(file_path, 'w') as file:
         file.write(json_data)
 
     cv2.waitKey(0)
-    return jsonify(json_data)
+    return json_data
 
-@app.route('/endpoint2')
+@app.route('/endpoint2', methods=['POST'])
 def endpoint2():
-    data = {'message': 'Hello from endpoint2'}
-    return jsonify(data)
+    if 'file' not in request.files:
+        return "No file found in the request.", 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return "No file selected.", 400
+
+    save_directory = "/pictures"  # Name of the folder to save the files
+    if not os.path.exists(save_directory):
+        os.makedirs(save_directory)
+
+    file.save(os.path.join(save_directory, file.filename))
+    return "File uploaded successfully."
 
 if __name__ == '__main__':
     app.run(debug=True)
