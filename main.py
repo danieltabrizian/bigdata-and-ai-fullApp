@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, send_from_directory
+from flask import Flask, render_template, jsonify, send_from_directory, request, send_file
 import os
 import json
 import cv2
@@ -10,9 +10,6 @@ from PIL import Image
 app = Flask(__name__)
 
 parsed_data = {}
-
-
-
 
 model = YOLO("SCDModelV1.pt")
 # model.export(format='onnx')
@@ -30,7 +27,6 @@ def create_json_object(results, class_labels, title):
             print(class_labels[key], '->', counter[key])
 
     parsed_data[len(parsed_data) + 1] = new_object
-
 
 @app.route('/')
 def index():
@@ -84,11 +80,16 @@ def endpoint2():
         os.makedirs(save_directory)
 
     file.save(os.path.join(save_directory, file.filename))
-    return "File uploaded successfully."]
+    return "File uploaded successfully."
 
 @app.route('/image/<filename>')
-def image_request(filename):
+def get_image(filename):
     return send_from_directory('output', filename+".jpg")
+
+
+@app.route('/json')
+def get_output():
+    return send_file( "output.json")
 
 
 if __name__ == '__main__':

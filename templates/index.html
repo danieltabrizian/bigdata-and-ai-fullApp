@@ -11,16 +11,33 @@
   <script>
 const ctx = document.getElementById('chart');
 
-let sampledata = {
-        "1": {"title": "Image 22-10-25 11-24-52_scaled", "ice cube": 2, "submarine": 1, "vertical": 2},
-        "2": {"title": "Image 22-10-25 11-28-21_scaled", "vertical": 5, "ice cube": 2},
-        "3": {"title": "Image 22-10-25 11-09-12_scaled", "ice cube": 2, "duplicate": 1, "submarine": 7}
-      };
-const labels = Object.keys(sampledata);
-const datasets = createDatasets(sampledata);
+let data = {};
+loadData();
 
+function loadData() {
+    fetch("/json")
+        .then((response) => response.json())
+        .then((data) => {
+            data = Object.values(data);
+            data.sort((a, b) => {
+              if(a.title < b.title) { return -1; }
+              if(a.title > b.title) { return 1; }
+              return 0;
+            });
+            data = averageEveryXValues(data,10)
+            data = calculatePercentageValues(data);
+            console.log(data)
+            createChart(data);
+        })
+        .catch(error => {
+            console.error(error);
+        });
+}
 
-new Chart(ctx, {
+function createChart(dta) {
+    const labels = Object.keys(dta);
+    const datasets = createDatasets(dta);
+    new Chart(ctx, {
         type: 'line',
         data: {
           labels: labels,
@@ -55,7 +72,7 @@ new Chart(ctx, {
           }
         }
       });
-
+}
 
 function createDatasets(data) {
       const uniqueKeys = ['duplicate','vertical','ice cube', 'submarine'];
@@ -67,6 +84,65 @@ function createDatasets(data) {
           fill: 'origin'
         };
       });
+}
+
+function averageEveryXValues(arr, x) {
+  let result = [];
+
+  for (let i = 0; i < arr.length; i += x) {
+    let temp = {};
+
+    for (let j = i; j < i + x && j < arr.length; j++) {
+      for (let key in arr[j]) {
+        if (key === 'title' && j === i) {
+          temp[key] = arr[j][key];
+        } else if (key !== 'title') {
+          temp[key] = temp[key] ? temp[key] + arr[j][key] : arr[j][key];
+        }
+      }
+    }
+
+    for (let key in temp) {
+      if (key !== 'title') {
+        temp[key] /= x;
+      }
+    }
+
+    result.push(temp);
+  }
+
+  return result;
+}
+
+
+
+function calculatePercentageValues(arr) {
+  let result = [];
+
+  for (let i = 0; i < arr.length; i++) {
+    let sum = 0;
+    let temp = {};
+
+    // Calculate the sum of all properties for the current object
+    for (let key in arr[i]) {
+      if (key !== 'title') {
+        sum += arr[i][key];
+      }
+    }
+
+    // Calculate the percentage for each property
+    for (let key in arr[i]) {
+      if (key === 'title') {
+        temp[key] = arr[i][key];
+      } else {
+        temp[key] = ((arr[i][key] / sum) * 100);
+      }
+    }
+
+    result.push(temp);
+  }
+
+  return result;
 }
 </script>
 
