@@ -6,15 +6,16 @@ import collections, numpy
 from ultralytics import YOLO
 from glob import glob
 from PIL import Image
+import zipfile
+import shutil
 
 app = Flask(__name__)
 
 parsed_data = {}
-
 model = YOLO("SCDModelV1.pt")
 # model.export(format='onnx')
-image_folder = r"pictures"  # Path to the folder containing images
-output_folder =  r"output"  # Path to the folder where you want to save the predicted images
+IMAGE_DIRECTORY = r"pictures"  # Path to the folder containing images
+OUTPUT_DIRECTORY = r"output"  # Path to the folder where you want to save the predicted images
 
 
 def create_json_object(results, class_labels, title):
@@ -28,25 +29,19 @@ def create_json_object(results, class_labels, title):
 
     parsed_data[len(parsed_data) + 1] = new_object
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-
-@app.route('/<path:filename>')
-def public_files(filename):
-    public_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
-    return send_from_directory(public_folder, filename)
-
-@app.route('/endpoint1')
-def endpoint1():
-    print(output_folder)
-
+def runModelOnImages(title):
     # Create the output folder if it doesn't exist
-    os.makedirs(output_folder, exist_ok=True)
+    os.makedirs(OUTPUT_DIRECTORY, exist_ok=True)
+
+    image_directory = os.path.join(IMAGE_DIRECTORY, title)
 
     # Get a list of image files in the folder
-    image_files = glob(os.path.join(image_folder, "*.jpg"))  # Modify the file extension if necessary
+    image_files = glob(os.path.join(image_directory, "*.jpg"))  # Modify the file extension if necessary
+
+    print("IMAGE DIR: " + image_directory)
+    print("IMAGE DIR: " + image_directory)
+    print("IMAGE DIR: " + image_directory)
+    print("IMAGE DIR: " + image_directory)
 
     # Go through the acquired images and add their details to JSON object by calling show_amount function
     for image_file in image_files:
@@ -55,42 +50,106 @@ def endpoint1():
         image_title = os.path.splitext(os.path.basename(image_file))[0]
 
         # Make predictions on the image
-        results = model.predict(image, save=True, show=False)  # Predict on the image
+        results = model.predict(image, save=True, show=False, project="./output", name=title)  # Predict on the image
         create_json_object(results, model.names, image_title)
 
     json_data = json.dumps(parsed_data)
-    file_path = "output.json"
-    with open(file_path, 'w') as file:
+    file_path = os.path.join(OUTPUT_DIRECTORY, title, 'output.json')
+    output_directory = os.path.dirname(file_path)
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+
+    # Open the file in write mode ('w+') to create if it doesn't exist
+    with open(file_path, 'w+') as file:
         file.write(json_data)
 
-    cv2.waitKey(0)
-    return jsonify(json_data)
+    return "Images were processed successfully. ", 200
 
-@app.route('/endpoint2', methods=['POST'])
-def endpoint2():
+def extract_zip_file(file):
+    save_directory = "pictures"  # Name of the folder to save the files
+
+    # Save the zip file
+    zip_filepath = os.path.join(save_directory, file.filename)
+    file.save(zip_filepath)
+
+    # Extract the contents of the zip file
+    folder_name = os.path.splitext(file.filename)[0]
+    extract_directory = os.path.join(save_directory, folder_name)
+
+    if not os.path.exists(extract_directory):
+        os.makedirs(extract_directory)
+
+    with zipfile.ZipFile(zip_filepath, 'r') as zip_ref:
+        zip_ref.extractall(extract_directory)
+
+    # Remove the zip file
+    os.remove(zip_filepath)
+
+    return "Files extracted and stored successfully."
+
+@app.route('/upload', methods=['POST'])
+def upload_images():
     if 'file' not in request.files:
         return "No file found in the request.", 400
 
     file = request.files['file']
+
     if file.filename == '':
         return "No file selected.", 400
 
-    save_directory = "/pictures"  # Name of the folder to save the files
-    if not os.path.exists(save_directory):
-        os.makedirs(save_directory)
+    save_directory = "pictures"  # Name of the folder to save the files
+    folder_name = os.path.splitext(file.filename)[0]
 
-    file.save(os.path.join(save_directory, file.filename))
-    return "File uploaded successfully."
+    print("FOLDER NAME::" + folder_name)
+    print("FOLDER NAME::" + folder_name)
+    print("FOLDER NAME::" + folder_name)
+    print("FOLDER NAME::" + folder_name)
+
+    extract_directory = os.path.join(save_directory, folder_name)
+
+    if os.path.exists(extract_directory):
+        return "Folder already exists.", 400
+
+    extraction_result = extract_zip_file(file)
+
+    if extraction_result != "Files extracted and stored successfully.":
+        return extraction_result, 400
+
+    result = runModelOnImages(folder_name)
+
+    return result
+
+@app.route('/delete/<title>', methods=['DELETE'])
+def delete_folders(title):
+    pictures_directory = f'pictures/{title}'
+    output_directory = f'output/{title}'
+
+    try:
+        # Delete the pictures directory and its contents
+        shutil.rmtree(pictures_directory)
+
+        # Delete the output directory and its contents
+        shutil.rmtree(output_directory)
+
+        return f"Folders '{pictures_directory}' and '{output_directory}' deleted successfully.", 200
+    except OSError as e:
+        return f"Error deleting folders: {str(e)}", 500
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/<path:filename>')
+def public_files(filename):
+    public_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+    return send_from_directory(public_folder, filename)
 
 @app.route('/image/<filename>')
 def get_image(filename):
     return send_from_directory('output', filename+".jpg")
 
-
 @app.route('/json')
 def get_output():
     return send_file( "output.json")
-
 
 if __name__ == '__main__':
     app.run(host="127.0.0.1", port=8080, debug=False)
