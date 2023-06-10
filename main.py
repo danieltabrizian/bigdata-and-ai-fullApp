@@ -11,7 +11,7 @@ import shutil
 
 app = Flask(__name__)
 
-parsed_data = {}
+
 model = YOLO("SCDModelV1.pt")
 # model.export(format='onnx')
 IMAGE_DIRECTORY = r"pictures"  # Path to the folder containing images
@@ -19,7 +19,7 @@ OUTPUT_DIRECTORY = r"output"  # Path to the folder where you want to save the pr
 
 
 def create_json_object(results, class_labels, title):
-    new_object = {"title": title}
+    new_object = {}
 
     for result in results:
         counter = collections.Counter(result.boxes.cls.numpy())
@@ -27,7 +27,7 @@ def create_json_object(results, class_labels, title):
             new_object[class_labels[key]] = counter[key]
             print(class_labels[key], '->', counter[key])
 
-    parsed_data[len(parsed_data) + 1] = new_object
+    return new_object
 
 def runModelOnImages(title):
     # Create the output folder if it doesn't exist
@@ -43,6 +43,7 @@ def runModelOnImages(title):
     print("IMAGE DIR: " + image_directory)
     print("IMAGE DIR: " + image_directory)
 
+    parsed_data = {}
     # Go through the acquired images and add their details to JSON object by calling show_amount function
     for image_file in image_files:
         # Load the image
@@ -51,7 +52,7 @@ def runModelOnImages(title):
 
         # Make predictions on the image
         results = model.predict(image, save=True, show=False, project="./output", name=title)  # Predict on the image
-        create_json_object(results, model.names, image_title)
+        parsed_data[image_title] = create_json_object(results, model.names, image_title)
 
     json_data = json.dumps(parsed_data)
     file_path = os.path.join(OUTPUT_DIRECTORY, title, 'output.json')
@@ -143,13 +144,28 @@ def public_files(filename):
     public_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
     return send_from_directory(public_folder, filename)
 
-@app.route('/image/<filename>')
-def get_image(filename):
-    return send_from_directory('output', filename+".jpg")
 
-@app.route('/json')
-def get_output():
-    return send_file( "output.json")
+@app.route('/datasets', methods=['GET'])
+def directory_info():
+    directories = []
+    for dir_name in os.listdir(OUTPUT_DIRECTORY):
+        dir_path = os.path.join(OUTPUT_DIRECTORY, dir_name)
+        if os.path.isdir(dir_path):
+            file_count = len(os.listdir(dir_path))
+            directories.append({
+                'directory_name': dir_name,
+                'file_count': file_count
+            })
+
+    return jsonify(directories)
+
+@app.route('/image/<dataset>/<filename>')
+def get_image(dataset,filename):
+    return send_file(os.path.join(OUTPUT_DIRECTORY, dataset,filename+".jpg"))
+
+@app.route('/load/<dirname>')
+def get_output(dirname):
+    return send_file(os.path.join(OUTPUT_DIRECTORY, dirname,"output.json"))
 
 if __name__ == '__main__':
-    app.run(host="127.0.0.1", port=8080, debug=False)
+    app.run(host="0.0.0.0", port=8080, debug=False)
