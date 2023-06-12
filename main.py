@@ -11,12 +11,8 @@ import shutil
 
 app = Flask(__name__)
 
-
-model = YOLO("SCDModelV1.pt")
-# model.export(format='onnx')
 IMAGE_DIRECTORY = r"pictures"  # Path to the folder containing images
 OUTPUT_DIRECTORY = r"output"  # Path to the folder where you want to save the predicted images
-
 
 def create_json_object(results, class_labels, title):
     new_object = {}
@@ -30,6 +26,7 @@ def create_json_object(results, class_labels, title):
     return new_object
 
 def runModelOnImages(title):
+    model = YOLO("SCDModelV1.pt")
     # Create the output folder if it doesn't exist
     os.makedirs(OUTPUT_DIRECTORY, exist_ok=True)
 
@@ -37,11 +34,6 @@ def runModelOnImages(title):
 
     # Get a list of image files in the folder
     image_files = glob(os.path.join(image_directory, "*.jpg"))  # Modify the file extension if necessary
-
-    print("IMAGE DIR: " + image_directory)
-    print("IMAGE DIR: " + image_directory)
-    print("IMAGE DIR: " + image_directory)
-    print("IMAGE DIR: " + image_directory)
 
     parsed_data = {}
     # Go through the acquired images and add their details to JSON object by calling show_amount function
@@ -101,11 +93,6 @@ def upload_images():
     save_directory = "pictures"  # Name of the folder to save the files
     folder_name = os.path.splitext(file.filename)[0]
 
-    print("FOLDER NAME::" + folder_name)
-    print("FOLDER NAME::" + folder_name)
-    print("FOLDER NAME::" + folder_name)
-    print("FOLDER NAME::" + folder_name)
-
     extract_directory = os.path.join(save_directory, folder_name)
 
     if os.path.exists(extract_directory):
@@ -127,14 +114,17 @@ def delete_folders(title):
 
     try:
         # Delete the pictures directory and its contents
-        shutil.rmtree(pictures_directory)
+        if os.path.exists(pictures_directory):
+            shutil.rmtree(pictures_directory)
 
         # Delete the output directory and its contents
-        shutil.rmtree(output_directory)
+        if os.path.exists(output_directory):
+            shutil.rmtree(output_directory)
 
         return f"Folders '{pictures_directory}' and '{output_directory}' deleted successfully.", 200
     except OSError as e:
         return f"Error deleting folders: {str(e)}", 500
+
 @app.route('/')
 def index():
     return render_template('index.html')
