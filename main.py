@@ -1,3 +1,27 @@
+import subprocess
+import sys
+import importlib.metadata
+def install(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+required_packages = [
+    'flask',
+    'opencv-python',
+    'numpy',
+    'pandas',
+    'ultralytics',
+    'Pillow',
+]
+
+for package in required_packages:
+    try:
+        dist = importlib.metadata.version(package)
+        print('{} ({}) is installed'.format(package, dist))
+    except importlib.metadata.PackageNotFoundError:
+        print('{} is NOT installed'.format(package))
+        install(package)
+
+
 from flask import Flask, render_template, jsonify, send_from_directory, request, send_file
 import os
 import json
@@ -111,7 +135,6 @@ def upload_images():
 def delete_folders(title):
     pictures_directory = f'pictures/{title}'
     output_directory = f'output/{title}'
-
     try:
         # Delete the pictures directory and its contents
         if os.path.exists(pictures_directory):
@@ -158,4 +181,4 @@ def get_output(dirname):
     return send_file(os.path.join(OUTPUT_DIRECTORY, dirname,"output.json"))
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=8080, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=False)

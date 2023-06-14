@@ -16,20 +16,21 @@
       <div class="row">
           <div class="col-3">
               <div class="card">
-                  <div class="card-body">
-                      <label for="fileupload">Select an archive with images to upload</label>
+                  <div  class="card-body">
+                      <div id="fileuploadbody">
+                          <label for="fileupload">Select an archive with images to upload</label>
                         <input type="file" name="files" id="fileupload">
+                      </div>
+                  </div>
+                  <div  class="card-body">
+                      <div id="spinner" class="spinner-border hidden" role="status">
+                          <span class="visually-hidden">Loading...</span>
+                        </div>
                   </div>
               </div>
 
             <ol class="list-group list-group-numbered" id="sidebar">
-              <li class="list-group-item d-flex justify-content-between align-items-start">
-                <div class="ms-2 me-auto">
-                  <div class="fw-bold">{directory_name}</div>
-                  Content for list item
-                </div>
-                <span class="badge bg-primary rounded-pill">{file_count}</span>
-              </li>
+
             </ol>
           </div>
           <div class="col-9 d-flex" style="flex-direction: column">
@@ -57,6 +58,9 @@
         justify-content: space-between;
         align-items: center;
       }
+      .hidden{
+          display: none !important;
+      }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -66,6 +70,10 @@ const ctx = document.getElementById('chart');
 const img = document.getElementById('img');
 const slider = document.getElementById('slider');
 const checkbox = document.getElementById('checkbox');
+
+const uploadbody = document.getElementById('fileuploadbody');
+const spinner = document.getElementById('spinner');
+
 
 let loaded_data = [];
 let processed_data = []
@@ -233,6 +241,8 @@ function uploadFile(inputId) {
   const fileInput = document.getElementById(inputId);
 
   fileInput.addEventListener('change', () => {
+      spinner.classList.remove('hidden');
+    uploadbody.classList.add('hidden');
     const file = fileInput.files[0];
     const endpointUrl = '/upload'; // Replace with your actual endpoint URL
 
@@ -252,6 +262,9 @@ function uploadFile(inputId) {
       .then(result => {
         // Handle the response from the server
         console.log(result);
+        fillDirectoryList()
+          {#spinner.classList.add('hidden');#}
+          {#uploadbody.classList.remove('hidden');#}
       })
       .catch(error => {
         // Handle any errors that occurred during the upload
@@ -287,7 +300,31 @@ function fillDirectoryList() {
         directoryName.className = 'fw-bold';
         directoryName.textContent = item.directory_name;
 
-        const contentText = document.createTextNode('Content for list item');
+        const contentText = document.createElement('a');
+        contentText.textContent = 'Delete';
+        contentText.href = '#';
+        contentText.style.marginLeft = '10px';
+
+        // Add event listener
+        contentText.addEventListener('click', function(e) {
+        e.preventDefault();
+
+        // Confirm deletion
+        if(confirm('Are you sure you want to delete this?')) {
+            // Send delete request
+            fetch('/delete/' + item.directory_name, {
+                method: 'DELETE',
+            }).then(response => response.text())
+            .then(data => {
+                // Handle success
+                console.log(data);
+                fillDirectoryList();
+            }).catch((error) => {
+                // Handle error
+                console.error('Error:', error);
+            });
+        }
+});
         listItemContent.appendChild(directoryName);
         listItemContent.appendChild(contentText);
 
